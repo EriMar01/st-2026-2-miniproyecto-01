@@ -29,9 +29,8 @@ entrega pierde el 20 %; quien no aparezca aquí no cuenta como parte del grupo.
 
 | Nombre completo | Código | Correo institucional |
 |---|---|---|
-| | | |
-| | | |
-| | | |
+|John Mario Carmona David | 22505692| john_mar.carmona@uao.edu.co|
+|Erica Rocio Márquez Meneses |22506153 |erica_roc.marquez@uao.edu.co |
 
 ## Entrega
 

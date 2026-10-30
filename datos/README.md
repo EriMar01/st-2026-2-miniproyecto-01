@@ -1,22 +1,12 @@
 # datos
 
-La serie del grupo va en esta carpeta, en CSV. Llene esta ficha y borre la
-serie de ejemplo cuando ya no la use.
-
 | Campo | Valor |
 |---|---|
-| Archivo | {{nombre del CSV}} |
-| Qué mide | {{...}} |
-| Fuente | {{institución o conjunto de datos, con enlace}} |
-| Licencia | {{...}} |
+| Archivo | {{SeriesReport-Not Seasonally Adjusted Sales - Monthly (Millions of Dollars).csv}} |
+| Qué mide | {{Ventas mensuales de Retail Trade and Food Services (comercio minorista y servicios de alimentos) en Estados Unidos, medidas en millones de dólares y sin ajuste estacional.}} |
+| Fuente | {{U.S. Census Bureau. Dataset "USA Monthly Retail Sales" (https://www.kaggle.com/datasets/landlord/usa-monthly-retail-trade/data)}} |
+| Licencia | {{CC0: Public Domain}} |
 | Frecuencia | mensual |
-| Periodo | {{primer mes}} a {{último mes}} ({{n}} observaciones) |
-| Columna de fecha | {{...}} |
-| Columna que se pronostica | {{...}} |
-
-## Serie de ejemplo
-
-`air_passengers.csv`: pasajeros mensuales de una aerolínea entre 1949 y 1960,
-la serie clásica de Box y Jenkins, tomada de Kaggle
-(`rakannimer/air-passengers`). Solo sirve para comprobar que el guion corre;
-el miniproyecto se hace con la serie del grupo.
+| Periodo | {{Enero de 1992}} a {{diciembre de 2020}} ({{348}} observaciones, {7} valores faltantes al final de la serie) |
+| Columna de fecha | {{Period}} |
+| Columna que se pronostica | {{Value}} |
