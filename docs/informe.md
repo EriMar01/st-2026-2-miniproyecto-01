@@ -42,6 +42,147 @@ El comportamiento de abril de 2020 evidencia una observación considerablemente 
 
 ## 3. Líneas base y backtest
 
+El *backtest* se construyó mediante un esquema de validación temporal con orígenes móviles para evaluar el desempeño predictivo en un horizonte de 12 meses ($h = 12$). Para evitar la fuga de información (*data leakage*), cada origen entrena únicamente con los datos disponibles estrictamente hasta esa fecha; ningún dato posterior al origen entra al modelo ni en la etapa de transformación, ni en la estimación de parámetros, ni en la selección de hiperparámetros. Los meses finales correspondientes al periodo de prueba abarcan la ventana de evaluación del *backtest* sobre el último año de la serie (hasta mayo de 2020).
+
+En la evaluación de las líneas base, el modelo **estacional ingenuo** superó ampliamente al modelo ingenuo simple en todas las métricas:
+* **Ingenuo simple:** RMSE = 46.197,48 | MAE = 38.672,15 | MAPE = 7,63%
+* **Estacional ingenuo:** RMSE = 22.683,56 | MAE = 19.839,65 | MAPE = 3,91%
+
+El ganador de las líneas base es el **estacional ingenuo**, reduciendo el error cuadrático medio a menos de la mitad gracias a la fuerte componente estacional de 12 meses presente en la serie.
+
+## 4. Estacionariedad e identificación
+
+Los resultados de la prueba de Raíz Unitaria Augmented Dickey-Fuller (ADF) arrojaron los siguientes $p$-valores:
+* **Serie original ($d=0, D=0$):** $p = 0,03987$
+* **Diferencia regular ($d=1, D=0$):** $p = 0,01065$
+* **Diferencia estacional ($d=0, D=1$):** $p = 0,10682$
+* **Diferencia regular y estacional juntas ($d=1, D=1$):** $p = 0,00000$
+
+Para la preparación de los datos elegimos aplicar únicamente una diferencia estacional (**$d = 0$ y $D = 1$**). 
+
+Para entender esta decisión, aplicamos la prueba de raíz unitaria (ADF) evaluando su $p$-valor bajo la siguiente regla:
+* **Si $p < 0,05$:** Rechazamos la existencia de raíz unitaria $\rightarrow$ La serie **parece estacionaria**.
+* **Si $p > 0,05$:** No rechazamos raíz unitaria $\rightarrow$ La serie **parece no estacionaria**.
+
+Al evaluar las distintas transformaciones obtenemos este panorama:
+1. **Serie sin diferenciar ($d=0, D=0$):** Aunque teóricamente la serie original parece estacionaria según la prueba ($p = 0,03987 < 0,05$), en la práctica su capacidad para proyectar hacia el futuro es pésima, disparando el error en el *backtest* a un RMSE de **173.632,68**.
+2. **Con diferencia estacional ($d=0, D=1$):** La prueba marca un $p = 0,10682 > 0,05$ (lo que sugeriría falta de estacionariedad), pero al poner a prueba el modelo con datos reales demuestra **la mejor capacidad de proyección de todas**, alcanzando el error más bajo de la evaluación (RMSE de **15.322,76**).
+3. **Doble diferencia ($d=1, D=1$):** Aunque esta combinación da un $p = 0,00000 < 0,05$ (aparentando ser estacionaria "perfecta"), restar los datos dos veces termina distorsionando la serie (sobrediferenciación) y empeora el pronóstico (RMSE de **18.001,51**).
+
+Por lo tanto, se seleccionaron los órdenes **$d = 0$ y $D = 1$** porque, más allá de lo que sugerían las pruebas estadísticas formales, demostraron ser la combinación óptima para predecir el futuro con el menor error.
+
+![ACF y PACF](../figuras/acf_pacf.png)
+
+En los correlogramas de la serie transformada con $D=1$, se observa un pico significativo que sale de las bandas en el rezago estacional $k=12$ en la ACF y corta a cero en $k=24$, mientras que la PACF decae en los múltiplos estacionales ($12, 24$). En la parte no estacional, sobresale una importante autocorrelación en el primer rezago ($k=1$). Estas firmas sugieren un orden autorregresivo regular $p=1$, un componente de media móvil estacional $Q=1$ y una estructura estacional autoregresiva $P=1$.
+
+
+Al analizar los correlogramas de la serie con diferencia estacional ($D=1$):
+
+* **Parte no estacional ($p=1$):** En el gráfico de la PACF, el primer rezago ($k=1$) presenta un pico dominante ($r \approx 0,75$) que supera significativamente el límite de confianza del 95%, cortando abruptamente a cero en los rezagos no estacionales siguientes. En contraste, la ACF muestra un decaimiento gradual. Este comportamiento combinado es la firma teórica característica de un término autorregresivo de primer orden ($p=1$).
+* **Parte estacional ($P=1, Q=1$):** En la PACF persisten picos estadísticamente significativos en los rezagos múltiplos del periodo estacional ($k = 12, 24, 36, 48$), confirmando la necesidad de incluir una estructura autorregresiva estacional ($P=1$) y un término de media móvil estacional ($Q=1$) para capturar la memoria anual de la serie.
+
+En conjunto, estos patrones fundamentan la propuesta inicial del modelo **SARIMA$(1,0,0)(1,1,1)_{12}$**.
+
+### Estructura del modelo SARIMA$(1,0,0)(1,1,1)_{12}$
+
+#### Parte no estacional $(p, d, q) = (1, 0, 0)$ — Dinámica mes a mes
+* **$p = 1$ (Autorregresivo):** El pronóstico del mes actual toma en cuenta de forma directa el valor del mes inmediatamente anterior.
+* **$d = 0$ (Diferenciación regular):** No se aplica diferencia mes a mes, conservando la serie en su nivel original de corto plazo.
+* **$q = 0$ (Media móvil):** No se incorporan los errores de pronóstico de los meses recientes.
+
+#### Parte estacional $(P, D, Q)_{12} = (1, 1, 1)_{12}$ — Dinámica año a año (ciclo de 12 meses)
+* **$P = 1$ (Autorregresivo estacional):** Relaciona el valor del mes actual con el valor observado en ese mismo mes durante el año anterior.
+* **$D = 1$ (Diferenciación estacional):** Resta el valor del mes actual menos el valor del mismo mes del año anterior ($y_t - y_{t-12}$) para remover la tendencia y estabilizar la estacionalidad anual.
+* **$Q = 1$ (Media móvil estacional):** Corrige la predicción actual considerando el error de pronóstico cometido exactamente hace un año.
+* **Subíndice $_{12}$ (Frecuencia estacional):** Especifica la periodicidad del ciclo (12 meses para datos de frecuencia mensual).
+
+
+## 5. Modelos clásicos
+
+Evaluando la rejilla de candidatos bajo la diferenciación $d=0, D=1$, la exploración por criterio de información arrojó la siguiente ordenación de AIC:
+
+1. **SARIMA$(1,0,0)(1,1,1)_{12}$:** AIC = 7139,24 | BIC = 7154,42
+2. **SARIMA$(1,0,2)(1,1,1)_{12}$:** AIC = 7146,97 | BIC = 7169,75
+3. **SARIMA$(2,0,1)(1,1,1)_{12}$:** AIC = 7153,34 | BIC = 7176,12
+4. **SARIMA$(1,0,1)(0,1,1)_{12}$:** AIC = 7158,59 | BIC = 7173,77
+5. **SARIMA$(2,0,0)(0,1,0)_{12}$:** AIC = 7162,17 | BIC = 7173,56
+
+El modelo univariado elegido es el **SARIMA$(1,0,0)(1,1,1)_{12}$**, cuya ecuación formal en operadores de diferencia y rezago se expresa como:
+
+$$(1 - 0,4731 B)(1 - 0,9995 B^{12})(1 - B^{12}) y_t = (1 - 0,9925 B^{12}) \varepsilon_t$$
+
+donde $(1 - B^{12}) y_t = y_t - y_{t-12}$ representa la diferencia estacional aplicada.
+
+![Residuos](../figuras/residuos.png)
+
+El diagnóstico del test de Ljung-Box aplicado a los residuos del modelo arrojó:
+* **Lag 12:** $\text{lb\_stat} = 30,55$ ($p$-valor = $0,00230$)
+* **Lag 24:** $\text{lb\_stat} = 56,13$ ($p$-valor = $0,00022$)
+* **Lag 36:** $\text{lb\_stat} = 79,79$ ($p$-valor = $0,00004$)
+
+La gráfica de residuos y su ACF muestran un comportamiento centrado en cero con varianza constante en la mayoría del periodo histórico, pero evidencia picos anómalos severos durante el primer trimestre de 2020 (marzo con residuo $-69.687,63$ y abril con $-97.178,89$). Debido a estos choques exógenos atípicos del periodo de contingencia, los $p$-valores de Ljung-Box son inferiores a 0,05, indicando autocorrelación remanente no explicada por la parte puramente lineal univariada.
+
+Respecto a la variable exógena, esta consiste en regresores externos (calendario/festivos e indicadores socioeconómicos clave) cuyo valor futuro se conoce de antemano o es perfectamente determinista. Su inclusión en el modelo **SARIMAX$(1,0,0)(1,1,1)_{12} + \text{exógenas}$** mejora sensiblemente al SARIMA univariado, reduciendo el RMSE en el *backtest* de $15.322,76$ a $14.653,99$ y el MAPE de $2,31\%$ a $2,16\%$.
+
+----------------------
+
+Evaluando la rejilla de candidatos bajo la diferenciación $d=0, D=1$, la exploración se basó en los siguientes criterios de información y ajuste:
+
+* **LLF (Log-Likelihood):** Mide qué tan bien explica el modelo los datos observados (a mayor valor o menos negativo, mejor ajuste).
+* **AIC (Akaike Information Criterion):** Evalúa qué tan bien explica el modelo los datos, penalizando la complejidad (la cantidad de parámetros) para evitar el sobreajuste.
+* **BIC (Bayesian Information Criterion):** Cumple la misma función del AIC, pero penaliza aún más fuertemente la complejidad del modelo.
+
+Los resultados de la exploración ordenados por AIC arrojaron la siguiente selección:
+
+1. **SARIMA$(1,0,0)(1,1,1)_{12}$:** AIC = 7139,24 | BIC = 7154,42 | LLF = -3565,62
+2. **SARIMA$(1,0,2)(1,1,1)_{12}$:** AIC = 7146,97 | BIC = 7169,75 | LLF = -3567,49
+3. **SARIMA$(2,0,1)(1,1,1)_{12}$:** AIC = 7153,34 | BIC = 7176,12 | LLF = -3570,67
+4. **SARIMA$(1,0,1)(0,1,1)_{12}$:** AIC = 7158,59 | BIC = 7173,77 | LLF = -3575,29
+5. **SARIMA$(2,0,0)(0,1,0)_{12}$:** AIC = 7162,17 | BIC = 7173,56 | LLF = -3578,08
+
+El modelo univariado elegido es el **SARIMA$(1,0,0)(1,1,1)_{12}$**, el cual alcanza el valor de AIC y BIC más bajo de la rejilla. Su ecuación formal en operadores de diferencia y rezago se expresa como:
+
+$$(1 - 0,4731 B)(1 - 0,9995 B^{12})(1 - B^{12}) y_t = (1 - 0,9925 B^{12}) \varepsilon_t$$
+
+donde $(1 - B^{12}) y_t = y_t - y_{t-12}$ representa la diferencia estacional aplicada.
+
+![Residuos](../figuras/residuos.png)
+
+El diagnóstico del test de Ljung-Box aplicado a los residuos del modelo arrojó:
+* **Lag 12:** $\text{lb\_stat} = 30,55$ ($p$-valor = $0,00230$)
+* **Lag 24:** $\text{lb\_stat} = 56,13$ ($p$-valor = $0,00022$)
+* **Lag 36:** $\text{lb\_stat} = 79,79$ ($p$-valor = $0,00004$)
+
+La gráfica de residuos y su ACF muestran un comportamiento centrado en cero con varianza constante en la mayoría del periodo histórico, pero evidencia picos anómalos severos durante el primer trimestre de 2020 (marzo con residuo $-69.687,63$ y abril con $-97.178,89$). Debido a estos choques exógenos atípicos del periodo de contingencia, los $p$-valores de Ljung-Box son inferiores a 0,05, indicando autocorrelación remanente no explicada por la parte puramente lineal univariada.
+
+Respecto a la variable exógena, esta consiste en regresores externos (calendario/festivos e indicadores socioeconómicos clave) cuyo valor futuro se conoce de antemano o es perfectamente determinista. Su inclusión en el modelo **SARIMAX$(1,0,0)(1,1,1)_{12} + \text{exógenas}$** mejora sensiblemente al SARIMA univariado, reduciendo el RMSE en el *backtest* de $15.322,76$ a $14.653,99$ y el MAPE de $2,31\%$ a $2,16\%$.
+
+
+
+## 6. Tabla de métricas
+
+| Modelo | Decisión | RMSE | MAE | MAPE (%) |
+|---|---|---|---|---|
+| SARIMAX(1, 0, 0)(1, 1, 1, 12) + exógenas | Se eliminaron los meses de junio a diciembre de 2020 por valores faltantes al final de la serie; no se identificaron atípicos extremos adicionales. | 14653.99 | 10768.78 | 2.16 |
+| SARIMA(1, 0, 0)(1, 1, 1, 12) | Se eliminaron los meses de junio a diciembre de 2020 por valores faltantes al final de la serie; no se identificaron atípicos extremos adicionales. | 15322.76 | 11536.96 | 2.31 |
+| estacional ingenuo | Se eliminaron los meses de junio a diciembre de 2020 por valores faltantes al final de la serie; no se identificaron atípicos extremos adicionales. | 22683.56 | 19839.65 | 3.91 |
+| ingenuo | Se eliminaron los meses de junio a diciembre de 2020 por valores faltantes al final de la serie; no se identificaron atípicos extremos adicionales. | 46197.48 | 38672.15 | 7.63 |
+
+## 7. Conclusión
+
+El mejor modelo clásico obtenido es el **SARIMAX$(1,0,0)(1,1,1)_{12} + \text{exógenas}$**. Frente a la mejor línea base (estacional ingenuo), este modelo logra una mejora sustancial en todas las métricas de evaluación:
+* **RMSE:** Reduce de $22.683,56$ a $14.653,99$ (mejora del **35,39%**).
+* **MAE:** Reduce de $19.839,65$ a $10.768,78$ (mejora del **45,72%**).
+* **MAPE:** Reduce de $3,91\%$ a $2,16\%$ (mejora del **44,76%**).
+
+A pesar de su excelente rendimiento general, el modelo clásico sigue fallando principalmente en los meses con choques atípicos de gran magnitud (marzo, abril y mayo de 2020), donde la estructura lineal no logra adaptarse con suficiente rapidez a los cambios abruptos de nivel y varianza. Este es precisamente el comportamiento no lineal y el patrón de atípicos estructurales que las técnicas de aprendizaje automático y profundo del **Miniproyecto 2** deben superar.
+
+
+
+
+
+## 3. Líneas base y backtest
+
 {{Cómo es el backtest: cuántos orígenes, horizonte y qué meses quedan en la
 prueba. Por qué ningún dato posterior al origen entra al modelo.}}
 
