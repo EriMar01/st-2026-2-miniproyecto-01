@@ -345,6 +345,32 @@ def estacionariedad(serie):
 # Cada modelo es una función modelo(entrenamiento, h) que devuelve h
 # pronósticos y solo usa `entrenamiento`. Así entra al backtest común.
 
+def elegir_sarimax(serie, x, d, D):
+    """Rejilla de órdenes (p, q, P, Q) para SARIMAX con exógenas ordenada por AIC."""
+    p_vals, q_vals, P_vals, Q_vals = [0, 1, 2], [0, 1, 2], [0, 1], [0, 1]
+    resultados, x_serie = [], x.loc[serie.index]
+
+    for p in p_vals:
+        for q in q_vals:
+            for P in P_vals:
+                for Q in Q_vals:
+                    try:
+                        modelo = SARIMAX(serie, exog=x_serie, order=(p, d, q),
+                                         seasonal_order=(P, D, Q, 12),
+                                         enforce_stationarity=True, enforce_invertibility=True)
+                        ajuste = modelo.fit(disp=False)
+                        if ajuste.mle_retvals.get("converged", False) and np.isfinite(ajuste.aic):
+                            resultados.append({"p": p, "q": q, "P": P, "Q": Q,
+                                               "AIC": ajuste.aic, "BIC": ajuste.bic, "LLF": ajuste.llf})
+                    except Exception:
+                        pass
+
+    tabla = pd.DataFrame(resultados).sort_values("AIC")
+    print("\n=== Rejilla SARIMAX (con exógenas) ===")
+    print(tabla.head(10).to_string(index=False))
+    return tabla
+
+
 def elegir_sarima(serie, d, D):
     """rejilla pequeña de órdenes (p, q, P, Q) comparada por AIC.
 
@@ -670,10 +696,13 @@ def main():
 
     if d is not None:
         try:
+              # 1. Rejilla SARIMA (Univariado)
             orden, estacional = elegir_sarima(serie, d, D)
             filas.append(fila(f"SARIMA{orden}{estacional}", serie,
                               modelo_sarima(orden, estacional)))
             x = exogenas(serie)
+            # 2. Rejilla SARIMAX (Con exógenas)
+            elegir_sarimax(serie, x, d, D)
             filas.append(fila(f"SARIMAX{orden}{estacional} + exógenas", serie,
                               modelo_sarimax(orden, estacional, x)))
 
@@ -681,7 +710,8 @@ def main():
             evaluar_residuos_sarimax(serie, orden, estacional, x)
         except NotImplementedError as error:
             pendiente("parte 4", error)
-
+            
+                        
     tabla = pd.DataFrame(filas).sort_values("RMSE")
     tabla.to_csv(RESULTADOS / "metricas.csv", index=False)
     print(tabla.drop(columns="decision").to_string(index=False))
