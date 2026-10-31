@@ -124,6 +124,9 @@ El diagnóstico del test de Ljung-Box aplicado a los residuos del modelo SARIMAX
 
 La gráfica de residuos y su ACF muestran un comportamiento centrado cerca de cero ($\text{media} = 2.877,64$) con varianza constante durante casi todo el registro histórico (1992–2019). Sin embargo, evidencia picos anómalos severos durante el primer trimestre de 2020 (marzo con residuo $-69.687,63$ y abril con $-97.178,89$). Debido a estos choques exógenos atípicos del periodo de contingencia, los $p$-valores de Ljung-Box son inferiores a 0,05, indicando autocorrelación remanente no explicada por la estructura lineal univariada.
 
+La variable exógena consiste en los días hábiles laborales de cada mes (`dias_habiles`). Se conoce de antemano porque se calcula directamente a partir del calendario civil (excluyendo fines de semana y festivos fijos), por lo que sus valores futuros a cualquier horizonte $h$ son $100\%$ deterministas y exactos. Su inclusión en el modelo **SARIMAX(1,0,0)(1,1,1)$_{12}$ + exógenas** mejora sensiblemente al SARIMA univariado, reduciendo el RMSE en el *backtest* de $15.322,76$ a $14.653,99$ (una mejora del $4,36\%$), el MAE de $11.536,96$ a $10.768,78$ y el MAPE de $2,31\%$ a $2,16\%$.
+
+
 La variable exógena consiste en los días hábiles laborales de cada mes (`dias_habiles`). Se conoce de antemano porque se calcula directamente a partir del calendario civil (excluyendo fines de semana y festivos fijos), por lo que sus valores futuros a cualquier horizonte $h$ son $100\%$ deterministas y exactos. Su inclusión en el modelo **SARIMAX$(1,0,0)(1,1,1)_{12} + \text{exógenas}$** mejora sensiblemente al SARIMA univariado, reduciendo el RMSE en el *backtest* de $15.322,76$ a $14.653,99$ (una mejora del $4,36\%$), el MAE de $11.536,96$ a $10.768,78$ y el MAPE de $2,31\%$ a $2,16\%$.
 
 ## 6. Tabla de métricas
