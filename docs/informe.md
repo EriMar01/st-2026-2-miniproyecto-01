@@ -107,7 +107,7 @@ Evaluando la rejilla de órdenes $(p, q, P, Q)$ bajo la diferenciación $d=0, D=
 4. **SARIMAX$(1,0,1)(1,1,0)_{12}$:** AIC = 7019,68 | BIC = 7038,66 | LLF = -3504,84
 5. **SARIMAX$(2,0,1)(1,1,1)_{12}$:** AIC = 7032,37 | BIC = 7058,94 | LLF = -3509,18
 
-Para mantener la consistencia teórica observada en las funciones de autocorrelación (ACF/PACF) y la estructura base de la serie, el modelo elegido es el **SARIMAX$(1,0,0)(1,1,1)_{12} + \text{exógenas}$**, cuya ecuación formal en operadores de diferencia y rezago con los coeficientes estimados se expresa como:
+Para mantener la consistencia teórica observada en las funciones de autocorrelación (ACF/PACF) y la estructura base de la serie, el modelo elegido es el **SARIMAX(1,0,0)(1,1,1)_{12} + exógenas**, cuya ecuación formal en operadores de diferencia y rezago con los coeficientes estimados se expresa como:
 
 $$(1 - 0,4731 B)(1 - 0,9995 B^{12})(1 - B^{12}) y_t = \beta \cdot X_t + (1 - 0,9925 B^{12}) \varepsilon_t$$
 
@@ -124,10 +124,7 @@ El diagnóstico del test de Ljung-Box aplicado a los residuos del modelo SARIMAX
 
 La gráfica de residuos y su ACF muestran un comportamiento centrado cerca de cero ($\text{media} = 2.877,64$) con varianza constante durante casi todo el registro histórico (1992–2019). Sin embargo, evidencia picos anómalos severos durante el primer trimestre de 2020 (marzo con residuo $-69.687,63$ y abril con $-97.178,89$). Debido a estos choques exógenos atípicos del periodo de contingencia, los $p$-valores de Ljung-Box son inferiores a 0,05, indicando autocorrelación remanente no explicada por la estructura lineal univariada.
 
-La variable exógena consiste en los días hábiles laborales de cada mes (`dias_habiles`). Se conoce de antemano porque se calcula directamente a partir del calendario civil (excluyendo fines de semana y festivos fijos), por lo que sus valores futuros a cualquier horizonte $h$ son $100\%$ deterministas y exactos. Su inclusión en el modelo **SARIMAX(1,0,0)(1,1,1)$_{12}$ + exógenas** mejora sensiblemente al SARIMA univariado, reduciendo el RMSE en el *backtest* de $15.322,76$ a $14.653,99$ (una mejora del $4,36\%$), el MAE de $11.536,96$ a $10.768,78$ y el MAPE de $2,31\%$ a $2,16\%$.
-
-
-La variable exógena consiste en los días hábiles laborales de cada mes (`dias_habiles`). Se conoce de antemano porque se calcula directamente a partir del calendario civil (excluyendo fines de semana y festivos fijos), por lo que sus valores futuros a cualquier horizonte $h$ son $100\%$ deterministas y exactos. Su inclusión en el modelo **SARIMAX$(1,0,0)(1,1,1)_{12} + \text{exógenas}$** mejora sensiblemente al SARIMA univariado, reduciendo el RMSE en el *backtest* de $15.322,76$ a $14.653,99$ (una mejora del $4,36\%$), el MAE de $11.536,96$ a $10.768,78$ y el MAPE de $2,31\%$ a $2,16\%$.
+La variable exógena consiste en los días hábiles laborales de cada mes (`dias_habiles`). Se conoce de antemano porque se calcula directamente a partir del calendario civil (excluyendo fines de semana y festivos fijos), por lo que sus valores futuros a cualquier horizonte $h$ son $100\%$ deterministas y exactos. Su inclusión en el modelo **SARIMAX(1,0,0)(1,1,1)_{12} + exógenas** mejora sensiblemente al SARIMA univariado, reduciendo el RMSE en el *backtest* de $15.322,76$ a $14.653,99$ (una mejora del $4,36\%$), el MAE de $11.536,96$ a $10.768,78$ y el MAPE de $2,31\%$ a $2,16\%$.
 
 ## 6. Tabla de métricas
 
@@ -140,7 +137,7 @@ La variable exógena consiste en los días hábiles laborales de cada mes (`dias
 
 ## 7. Conclusión
 
-El mejor modelo clásico obtenido es el **SARIMAX$(1,0,0)(1,1,1)_{12} + \text{exógenas}$**. Frente a la mejor línea base (estacional ingenuo), este modelo logra una mejora sustancial en todas las métricas de evaluación:
+El mejor modelo clásico obtenido es el **SARIMAX(1,0,0)(1,1,1)_{12} + exógenas**. Frente a la mejor línea base (estacional ingenuo), este modelo logra una mejora sustancial en todas las métricas de evaluación:
 * **RMSE:** Reduce de $22.683,56$ a $14.653,99$ (mejora del **35,39%**).
 * **MAE:** Reduce de $19.839,65$ a $10.768,78$ (mejora del **45,72%**).
 * **MAPE:** Reduce de $3,91\%$ a $2,16\%$ (mejora del **44,76%**).
@@ -149,4 +146,4 @@ Al comparar su desempeño frente a la mejor línea base de referencia, el **Esta
 
 Sin embargo, a pesar de su excelente capacidad predictiva global, el modelo no está exento de limitaciones y experimenta fallas marcadas en tramos específicos de la serie. El punto más crítico ocurre durante el primer trimestre de 2020, coincidiendo con el estallido de la contingencia sanitaria por COVID-19. En este periodo, la serie sufre caídas estructurales sin precedentes que la estructura autoregresiva lineal no logra absorber, generando desvíos severos en marzo (residuo de $-69.687,63$) y abril (residuo de $-97.178,89$). Asimismo, se observan imprecisiones menores durante los cierres de año en diciembre y en épocas de turbulencia macroeconómica —como la crisis financiera de 2008-2009—, donde la volatilidad del consumo supera lo explicable por el mero conteo de días hábiles.
 
-Con estos resultados, el **SARIMAX$(1,0,0)(1,1,1)_{12} + \text{exógenas}$** queda oficialmente registrado como el punto de referencia (*benchmark*) a vencer. Toda arquitectura de aprendizaje automático o modelo no lineal que se desarrolle en el **Miniproyecto 2** tendrá la tarea explícita de superar este umbral, demostrando un RMSE inferior a **$14.653,99$** y un MAPE por debajo del **$2,16\%$**.
+Con estos resultados, el **SARIMAX(1,0,0)(1,1,1)_{12} + exógenas** queda oficialmente registrado como el punto de referencia (*benchmark*) a vencer. Toda arquitectura de aprendizaje automático o modelo no lineal que se desarrolle en el **Miniproyecto 2** tendrá la tarea explícita de superar este umbral, demostrando un RMSE inferior a **$14.653,99$** y un MAPE por debajo del **$2,16\%$**.
