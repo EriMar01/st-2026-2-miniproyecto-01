@@ -1,10 +1,5 @@
 # Informe del miniproyecto 1
 
-Llene cada sección reemplazando los marcadores `{{...}}`, sin quitar las
-secciones. Las cifras salen de lo que imprime `python miniproyecto.py` y las
-figuras son las que ese guion deja en `figuras/`. Las fórmulas van en LaTeX
-(`$...$` o `$$...$$`).
-
 ## 1. La serie
 
 Para el desarrollo del miniproyecto se utilizó una serie temporal mensual de ventas minoristas de Estados Unidos, correspondiente al periodo comprendido entre enero de 1992 y diciembre de 2020. La variable representa el comportamiento de las ventas minoristas a lo largo del tiempo y permite estudiar su evolución, tendencia y patrones estacionales.
