@@ -1,0 +1,5 @@
+modelo,decision,RMSE,MAE,MAPE
+"SARIMAX(1, 0, 0)(1, 1, 1, 12) + exógenas",Se eliminaron los meses de junio a diciembre de 2020 por valores faltantes al final de la serie; no se identificaron atípicos extremos adicionales.,14653.99,10768.78,2.16
+"SARIMA(1, 0, 0)(1, 1, 1, 12)",Se eliminaron los meses de junio a diciembre de 2020 por valores faltantes al final de la serie; no se identificaron atípicos extremos adicionales.,15322.76,11536.96,2.31
+estacional ingenuo,Se eliminaron los meses de junio a diciembre de 2020 por valores faltantes al final de la serie; no se identificaron atípicos extremos adicionales.,22683.56,19839.65,3.91
+ingenuo,Se eliminaron los meses de junio a diciembre de 2020 por valores faltantes al final de la serie; no se identificaron atípicos extremos adicionales.,46197.48,38672.15,7.63
