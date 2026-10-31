@@ -117,9 +117,9 @@ donde $(1 - B^{12}) y_t = y_t - y_{t-12}$ representa la diferencia estacional ap
 
 El diagnóstico del test de Ljung-Box aplicado a los residuos del modelo SARIMAX arrojó los siguientes resultados:
 
-* **Lag 12:** $\text{lb\_stat} = 30,55$ ($p$-valor = $0,00230$)
-* **Lag 24:** $\text{lb\_stat} = 56,13$ ($p$-valor = $0,00022$)
-* **Lag 36:** $\text{lb\_stat} = 79,79$ ($p$-valor = $0,00004$)
+* **Lag 12:** lb_stat = $30,55$ ($p$-valor = $0,00230$)
+* **Lag 24:** lb_stat = $56,13$ ($p$-valor = $0,00022$)
+* **Lag 36:** lb_stat = $79,79$ ($p$-valor = $0,00004$)
 
 
 La gráfica de residuos y su ACF muestran un comportamiento centrado cerca de cero ($\text{media} = 2.877,64$) con varianza constante durante casi todo el registro histórico (1992–2019). Sin embargo, evidencia picos anómalos severos durante el primer trimestre de 2020 (marzo con residuo $-69.687,63$ y abril con $-97.178,89$). Debido a estos choques exógenos atípicos del periodo de contingencia, los $p$-valores de Ljung-Box son inferiores a 0,05, indicando autocorrelación remanente no explicada por la estructura lineal univariada.
